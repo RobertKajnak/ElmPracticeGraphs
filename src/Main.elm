@@ -269,15 +269,59 @@ contentToEntries content =
 
 getDownloadButton : Model -> Html Msg
 getDownloadButton model =
-  case model.content of
+  {-case model.content of
     Nothing ->
       p [] []
-    Just content ->
-      button [ onClick CsvDownload ] [ text "Download Generated Graph"]
+    Just content ->-}
+      button [ onClick CsvDownload ] [ text "Download Sample Data"]
 
 type alias DataPoint = 
   { date : Float
   , value : Float
+  }
+
+strToData : String -> String -> DataPoint
+strToData date value =
+  DataPoint 
+    (Maybe.withDefault 0 (String.toFloat date)) 
+    (Maybe.withDefault 0 (String.toFloat value))
+
+listToData: List String-> DataPoint
+listToData strArr =
+  case strArr of
+    [d,v] ->
+      strToData d v
+    d :: v :: _ ->
+      strToData d v
+    [d] ->
+      strToData d "0"
+    _ ->
+      DataPoint 0 0
+
+
+lineFromLineData : LineData -> LineChart.Series DataPoint
+lineFromLineData lineData =
+  LineChart.line Colors.purple Dots.cross lineData.label lineData.data
+
+chartArray :  List LineData -> List (LineChart.Series DataPoint) 
+  -> List (LineChart.Series DataPoint) 
+chartArray  data startLines =
+  --case legend 
+  case data of 
+    [line] ->
+      chartArray [] startLines
+    line :: moreLines ->
+      chartArray (List.drop 1 data) ((lineFromLineData line)::startLines)
+    [] ->
+      startLines
+  {-[ LineChart.line Colors.purple Dots.cross "alma" [DataPoint 1 2]
+  , LineChart.line Colors.blue Dots.square "beta" [DataPoint 4 5]
+  , LineChart.line Colors.cyan Dots.circle "Chuck" [DataPoint 3 9]
+  ]-}
+
+type alias LineData = 
+  {label : String
+  , data : List DataPoint
   }
 
 chart : Maybe String -> Html msg
@@ -286,26 +330,91 @@ chart contents =
     Nothing ->
       p [] []
     Just cont ->
-      LineChart.view1 .date .value (getDataListFromCSV cont)
+      case getDataListFromCSV cont of 
+        Nothing ->
+          p [] []
+        Just dataList ->
+          LineChart.view .date .value (chartArray (getAllData cont) [])--[{label = "alma", data = [DataPoint 1 2]}]  []) 
 
-getDataListFromCSV : String -> List DataPoint
+getDataListFromCSV : String -> Maybe (List DataPoint)
 getDataListFromCSV contents = 
   let 
     headers = String.split "," <| Maybe.withDefault "" <| List.head <| String.lines contents 
     --values =
   in
-    {-contents
+    contents
       |> String.lines 
-      |> List.map ( List.take 2 )
-      |> List.map (List.map2 DataPoint)-}
+      |> List.map ( String.split ",") --[[1,2,3],[4,5,6]]
+      |> List.map ( List.take 2 ) -- [[1,2],[4,5]]
+      |> List.map listToData
+      |> List.tail
     
-    [ DataPoint 10 50 
-    , DataPoint 11 60
-    , DataPoint 13 70]
+
+-- https://stackoverflow.com/questions/31932683/transpose-in-elm-without-maybe
+transpose : List (List a) -> List (List a)
+transpose ll =
+  let heads = List.map (List.take 1) ll |> List.concat
+      tails = List.map (List.drop 1) ll 
+  in
+      if List.length heads == List.length ll then
+             heads::(transpose tails)
+         else
+             []
+
 
 --getLine :  String -> List dataPoint -> LineChart.Series data
 --getLine color label value = 
 --  LineChart.line color Dots.diamond label value
+
+
+
+getAllData : String -> List LineData
+getAllData contents  =
+  let
+    trans = 
+      contents        
+        |> String.lines 
+        |> List.map ( String.split ",")
+        |> transpose 
+  in
+    List.filterMap identity <| List.indexedMap (getSingleData trans) trans
+
+
+getSingleData : List (List String) -> Int -> List String -> Maybe LineData
+getSingleData transposed index _  =
+  if index == 0 then
+    Nothing
+  else
+    let 
+      dates = 
+        transposed
+          |> List.head
+          |> Maybe.withDefault []
+          |> List.tail
+          |> Maybe.withDefault []
+      goodLines =
+        transposed
+          |> List.drop index
+          |> List.head
+          |> Maybe.withDefault []
+
+      header = Maybe.withDefault "Unknown" (List.head  goodLines)
+      data = List.drop 1 goodLines
+    in
+      Just ( LineData header (List.map2 strToData dates data))
+
+    
+  {-let 
+    decomposed = 
+      contents
+        |> String.lines 
+        |> List.map ( String.split ",") --[[1,2,3],[4,5,6]]
+        |> List.map ( List.take 2 ) -- [[1,2],[4,5]]
+        |> List.map listToData
+  in
+    case decomposed of
+      label :: rest ->
+-}
 
 
 possibleColors =
@@ -317,13 +426,26 @@ possibleColors =
   , Colors.gold
   ]
 
+sample_data = 
+  """date,total,new,relearned,recapped,forgotten
+1589561268000,20,3,1,16,0
+1589561268000,25,12,0,10,3
+1589993268000,50,16,3,27,4
+1590079668000,60,15,5,33,7
+1590252468000,55,13,10,28,4
+1590338868000,58,14,15,18,11
+1590425268000,53,10,10,26,7
+1590511668000,55,20,5,25,5
+1590598068000,85,16,4,60,5"""
+
 downloadModel : Model -> Cmd msg
 downloadModel model =
-  case model.content of
+  {-case model.content of
     Nothing -> 
       Cmd.none
     Just content -> 
-      Download.string "Graph.png" "image/png+jpg" content
+      Download.string "Graph.png" "image/png+jpg" content-}
+    Download.string "Sample_data.csv" "Comma Separated Values/csv" sample_data
 
 getNiceDate : Time.Posix -> Time.Zone -> String
 getNiceDate time zone =
