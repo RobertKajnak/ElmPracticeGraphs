@@ -1,0 +1,23 @@
+{
+  "name": "langrweb",
+  "version": "1.0.0",
+  "description": "Practice projects with graphs and time",
+  "main": "index.js",
+  "scripts": {
+    "build": "elm-app build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobertKajnak/ElmPracticeGraphs.git"
+  },
+  "author": "Robert Kajnak",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RobertKajnak/ElmPracticeGraphs/issues"
+  },
+  "homepage": "https://github.com/RobertKajnak/ElmPracticeGraphs#readme",
+  "devDependencies": {
+    "create-elm-app": "^4.2.24"
+  }
+}
